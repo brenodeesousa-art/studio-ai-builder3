@@ -1,57 +1,69 @@
 
-const express = require("express");
-const cors = require("cors");
-const OpenAI = require("openai");
-const rateLimit = require("express-rate-limit");
+import express from "express";
+import OpenAI from "openai";
+import rateLimit from "express-rate-limit";
 
 const app = express();
 
-app.use(cors());
 app.use(express.json({ limit: "20kb" }));
 
+const limiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 10
+});
+
+app.use("/chat", limiter);
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
+
 app.get("/", (req, res) => {
-    res.json({ status: "Studio AI Builder online" });
+  res.send("Studio AI Builder online!");
 });
 
-app.post("/generate", rateLimit({
-    windowMs: 60000,
-    limit: 10
-}), async (req, res) => {
-    try {
-        if (!process.env.APP_ACCESS_TOKEN ||
-            req.headers["x-app-token"] !== process.env.APP_ACCESS_TOKEN) {
-            return res.status(401).json({
-                error: "Acesso não autorizado."
-            });
-        }
+app.post("/chat", async (req, res) => {
+  try {
+    const token = req.headers["x-app-access-token"];
 
-        const prompt = req.body.prompt;
-
-        if (!prompt || typeof prompt !== "string" ||
-            prompt.length > 3000) {
-            return res.status(400).json({
-                error: "Pedido inválido."
-            });
-        }
-
-        const client = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY
-        });
-
-        const response = await client.responses.create({
-            model: "gpt-5.5",
-            instructions: "Você é especialista em Roblox Studio e Luau. Gere scripts completos e explique onde colocar cada script no Explorer.",
-            input: prompt
-        });
-
-        res.json({ result: response.output_text });
-
-    } catch (error) {
-        res.status(500).json({
-            error: "Erro ao gerar código."
-        });
+    if (!process.env.APP_ACCESS_TOKEN ||
+        token !== process.env.APP_ACCESS_TOKEN) {
+      return res.status(401).json({
+        error: "Acesso não autorizado."
+      });
     }
+
+    const message = req.body?.message;
+
+    if (typeof message !== "string" ||
+        message.trim().length === 0 ||
+        message.length > 4000) {
+      return res.status(400).json({
+        error: "Mensagem inválida."
+      });
+    }
+
+    const response = await openai.responses.create({
+      model: "gpt-6-luna",
+      instructions:
+        "Você é a Studio AI Builder, uma IA especialista em Roblox Studio e Luau. " +
+        "Ajude a criar sistemas, corrigir erros e explicar onde colocar scripts. " +
+        "Quando pedirem código, forneça o código completo, pronto para copiar. " +
+        "Nunca diga que instalou ou executou scripts no projeto.",
+      input: message
+    });
+
+    res.json({
+      reply: response.output_text
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      error: "Não consegui responder agora. Tente novamente."
+    });
+  }
 });
 
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, "0.0.0.0");
