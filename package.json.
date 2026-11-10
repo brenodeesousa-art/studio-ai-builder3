@@ -1,14 +1,14 @@
+
 {
   "name": "studio-ai-builder",
   "version": "1.0.0",
-  "main": "server.js",
+  "type": "module",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.21.2",
-    "cors": "^2.8.5",
-    "openai": "^5.0.0",
-    "express-rate-limit": "^7.5.0"
+    "express": "^5.1.0",
+    "openai": "^5.20.0",
+    "express-rate-limit": "^8.1.0"
   }
 }
