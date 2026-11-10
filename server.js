@@ -18,17 +18,19 @@ app.post("/generate", rateLimit({
     limit: 10
 }), async (req, res) => {
     try {
-        const prompt = req.body.prompt;
-
-        if (!prompt || typeof prompt !== "string") {
-            return res.status(400).json({
-                error: "Digite um pedido válido."
+        if (!process.env.APP_ACCESS_TOKEN ||
+            req.headers["x-app-token"] !== process.env.APP_ACCESS_TOKEN) {
+            return res.status(401).json({
+                error: "Acesso não autorizado."
             });
         }
 
-        if (prompt.length > 3000) {
+        const prompt = req.body.prompt;
+
+        if (!prompt || typeof prompt !== "string" ||
+            prompt.length > 3000) {
             return res.status(400).json({
-                error: "Pedido muito grande."
+                error: "Pedido inválido."
             });
         }
 
@@ -38,13 +40,11 @@ app.post("/generate", rateLimit({
 
         const response = await client.responses.create({
             model: "gpt-5.5",
-            instructions: "Você é especialista em Roblox Studio e Luau. Gere scripts completos, explique onde colocar cada script e como organizar o Explorer. Nunca diga que alterou o projeto.",
+            instructions: "Você é especialista em Roblox Studio e Luau. Gere scripts completos e explique onde colocar cada script no Explorer.",
             input: prompt
         });
 
-        res.json({
-            result: response.output_text
-        });
+        res.json({ result: response.output_text });
 
     } catch (error) {
         res.status(500).json({
@@ -53,6 +53,5 @@ app.post("/generate", rateLimit({
     }
 });
 
-const PORT = process.env.PORT || 3000;
-
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, "0.0.0.0");
