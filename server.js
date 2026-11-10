@@ -15,7 +15,7 @@ const limiter = rateLimit({
 app.use("/chat", limiter);
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.chat1
 });
 
 app.get("/", (req, res) => {
@@ -26,8 +26,13 @@ app.post("/chat", async (req, res) => {
   try {
     const token = req.headers["x-app-access-token"];
 
-    if (!process.env.APP_ACCESS_TOKEN ||
-        token !== process.env.APP_ACCESS_TOKEN) {
+    if (!process.env.chat1 || !process.env.chat2) {
+      return res.status(500).json({
+        error: "Configuração do servidor incompleta."
+      });
+    }
+
+    if (token !== process.env.chat2) {
       return res.status(401).json({
         error: "Acesso não autorizado."
       });
@@ -35,9 +40,11 @@ app.post("/chat", async (req, res) => {
 
     const message = req.body?.message;
 
-    if (typeof message !== "string" ||
-        message.trim().length === 0 ||
-        message.length > 4000) {
+    if (
+      typeof message !== "string" ||
+      message.trim().length === 0 ||
+      message.length > 4000
+    ) {
       return res.status(400).json({
         error: "Mensagem inválida."
       });
@@ -45,12 +52,9 @@ app.post("/chat", async (req, res) => {
 
     const response = await openai.responses.create({
       model: "gpt-6-luna",
-      instructions:
-        "Você é a Studio AI Builder, uma IA especialista em Roblox Studio e Luau. " +
-        "Ajude a criar sistemas, corrigir erros e explicar onde colocar scripts. " +
-        "Quando pedirem código, forneça o código completo, pronto para copiar. " +
-        "Nunca diga que instalou ou executou scripts no projeto.",
-      input: message
+      instructions: "Você é a Studio AI Builder, uma IA especialista em Roblox Studio e Luau. Ajude a criar sistemas, corrigir erros e explicar onde colocar scripts. Quando pedirem código, forneça o código completo, pronto para copiar. Nunca diga que instalou ou executou scripts no projeto.",
+      input: message,
+      max_output_tokens: 2000
     });
 
     res.json({
